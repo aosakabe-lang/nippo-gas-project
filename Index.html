@@ -1,286 +1,242 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <base target="_top">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
   <title>Gemini 日報アシスタント</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
   <style>
-    :root {
-      --bg-main: #f8fafc;
-      --card-bg: #ffffff;
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --success: #10b981;
-      --success-hover: #059669;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-      --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.05);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
     
-    body {
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 0;
+    .chat-card {
+      width: 100%; max-width: 680px; height: 85vh; max-height: 750px;
+      background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); display: flex; flex-direction: column; overflow: hidden;
+    }
+    
+    /* ヘッダー */
+    .chat-header {
+      padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon {
+      width: 40px; height: 40px; background: linear-gradient(135deg, #7c3aed, #6366f1);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px;
+    }
+    .header-title { font-size: 1.05rem; font-weight: 700; color: #1e293b; }
+    .header-subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+    .btn-sheet-link {
+      font-size: 0.8rem; color: #0284c7; background: #e0f2fe; border: none; padding: 6px 12px; border-radius: 6px;
+      font-weight: 600; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 4px;
+    }
+    .btn-sheet-link:hover { background: #bae6fd; }
+
+    /* メッセージ表示エリア */
+    .chat-body {
+      flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #fafafa;
+    }
+    .message { display: flex; gap: 10px; max-width: 85%; }
+    .message.bot { align-self: flex-start; }
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .bubble {
+      padding: 12px 16px; border-radius: 16px; font-size: 0.92rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+    }
+    .bubble a {
+      color: #2563eb; font-weight: 600; text-decoration: underline;
+    }
+    .bubble a:hover {
+      color: #1d4ed8;
+    }
+    .message.bot .bubble {
+      background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; border-top-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .message.user .bubble {
+      background: #6366f1; color: #ffffff; border-top-right-radius: 4px;
     }
 
-    .app-container {
-      width: 100%;
-      max-width: 720px;
-      height: 100vh;
-      background: var(--card-bg);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    /* フッター・入力エリア */
+    .chat-footer {
+      padding: 16px; border-top: 1px solid #f1f5f9; background: #ffffff;
     }
-
-    @media (min-width: 640px) {
-      body { padding: 24px; }
-      .app-container {
-        height: 88vh;
-        border-radius: 24px;
-        box-shadow: var(--shadow-lg);
-        border: 1px solid var(--border);
-      }
+    .input-wrapper {
+      position: relative; margin-bottom: 12px;
     }
-
-    .header {
-      padding: 18px 24px;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .chat-input {
+      width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px;
+      font-size: 0.95rem; outline: none; background: #f8fafc; transition: border-color 0.2s;
     }
-
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
+    .chat-input:focus { border-color: #6366f1; background: #ffffff; }
+    
+    .footer-actions {
+      display: flex; justify-content: space-between; align-items: center;
     }
+    .shortcut-hint { font-size: 0.75rem; color: #94a3b8; }
+    .button-group { display: flex; gap: 8px; }
 
-    .brand-text h1 { font-size: 1rem; font-weight: 700; }
-    .brand-text p { font-size: 0.725rem; color: var(--text-muted); }
-
-    #chat-box {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      background: #fafafa;
+    .btn {
+      padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.88rem; cursor: pointer; border: none; transition: opacity 0.2s;
     }
-
-    .message-wrapper {
-      display: flex;
-      flex-direction: column;
-      max-width: 82%;
-      animation: slideUp 0.15s ease-out;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .message-wrapper.user { align-self: flex-end; }
-    .message-wrapper.bot { align-self: flex-start; }
-
-    .message {
-      padding: 12px 16px;
-      border-radius: 16px;
-      font-size: 0.925rem;
-      line-height: 1.5;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-    }
-
-    .user .message {
-      background: var(--primary);
-      color: white;
-      border-bottom-right-radius: 4px;
-    }
-
-    .bot .message {
-      background: var(--card-bg);
-      color: var(--text-main);
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
-    }
-
-    .error .message { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-
-    .typing-dots { display: inline-flex; gap: 4px; align-items: center; padding: 4px 8px; }
-    .typing-dots span { width: 6px; height: 6px; background: #a1a1aa; border-radius: 50%; animation: blink 1.4s infinite fill-mode: both; }
-    .typing-dots span:nth-child(2) { animation-delay: .2s; }
-    .typing-dots span:nth-child(3) { animation-delay: .4s; }
-    @keyframes blink { 0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; } }
-
-    .input-card {
-      padding: 14px 18px;
-      background: var(--card-bg);
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    textarea {
-      width: 100%;
-      height: 50px;
-      padding: 12px;
-      background: #f8fafc;
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      resize: none;
-      font-size: 0.925rem;
-      outline: none;
-      transition: all 0.15s;
-    }
-
-    textarea:focus { background: #fff; border-color: var(--primary); }
-
-    .action-bar { display: flex; justify-content: space-between; align-items: center; }
-    .hint { font-size: 0.7rem; color: var(--text-muted); }
-    .btn-group { display: flex; gap: 8px; }
-
-    button {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .send-btn { background: var(--primary); color: white; }
-    .send-btn:hover { background: var(--primary-hover); }
-    .save-btn { background: var(--success); color: white; }
-    .save-btn:hover { background: var(--success-hover); }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-send { background: #6366f1; color: #ffffff; }
+    .btn-save { background: #10b981; color: #ffffff; }
+    .btn-add { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
   </style>
 </head>
 <body>
-  <div class="app-container">
-    <div class="header">
-      <div class="brand">
-        <div class="brand-icon">✦</div>
-        <div class="brand-text">
-          <h1>Gemini 日報アシスタント</h1>
-          <p>AI対話 ➔ スプレッドシート自動蓄積</p>
-        </div>
+
+<div class="chat-card">
+  <!-- ヘッダー -->
+  <div class="chat-header">
+    <div class="header-left">
+      <div class="header-icon">✦</div>
+      <div>
+        <div class="header-title">Gemini 日報アシスタント</div>
+        <div class="header-subtitle">AI対話 → スプレッドシート自動蓄積</div>
       </div>
     </div>
+    <!-- スプレッドシート確認ボタン -->
+    <button class="btn-sheet-link" onclick="openSpreadsheet()">📊 シートを確認</button>
+  </div>
 
-    <div id="chat-box">
-      <div class="message-wrapper bot">
-        <div class="message">こんにちは！今日行った業務や困ったことなどを教えてください。</div>
-      </div>
-    </div>
-
-    <div class="input-card">
-      <textarea id="user-input" placeholder="メッセージを入力..."></textarea>
-      <div class="action-bar">
-        <div class="hint">Enterで送信 / Shift+Enterで改行</div>
-        <div class="btn-group">
-          <button class="send-btn" onclick="sendMessage()">送信 ↵</button>
-          <button class="save-btn" onclick="saveReport()">今日の日報保存 ✨</button>
-        </div>
-      </div>
+  <!-- チャット履歴 -->
+  <div class="chat-body" id="chatBody">
+    <div class="message bot">
+      <div class="bubble">こんにちは！今日行った業務の中で、手順を記録に残しておきたい業務や困った対応を1つ教えてください。（単語や一言でOKです！）</div>
     </div>
   </div>
 
-  <script>
-    let log = [];
+  <!-- 入力エリア -->
+  <div class="chat-footer">
+    <div class="input-wrapper">
+      <input type="text" id="userInput" class="chat-input" placeholder="メッセージを入力..." onkeydown="handleKeyDown(event)">
+    </div>
+    <div class="footer-actions">
+      <div class="shortcut-hint">Enterで送信 / Shift+Enterで改行</div>
+      <div class="button-group">
+        <button class="btn btn-add" id="btnAdd" onclick="startNewTask()">＋ 別の業務を追加</button>
+        <button class="btn btn-send" id="btnSend" onclick="sendMessage()">送信 ↵</button>
+        <button class="btn btn-save" id="btnSave" onclick="saveToSheet()">今日の日報保存 ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    document.getElementById('user-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+<script>
+  let step = 1;
+  let currentSheetUrl = '';
+  let data = { taskName: '', steps: '', tips: '', fullLog: [] };
+
+  // メッセージ送信処理
+  function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMessage(text, 'user');
+    input.value = '';
+
+    setTimeout(() => {
+      if (step === 1) {
+        data.taskName = text;
+        appendMessage(`ありがとうございます！『${text}』について教えてください。\n具体的にどのような「手順」で進めましたか？\n（例：1. 〇〇シートを開く → 2. △△を入力する）`, 'bot');
+        step = 2;
+      } else if (step === 2) {
+        data.steps = text;
+        appendMessage('なるほど、手順がよく分かりました！\nその作業を行う上で「気をつけるポイント」や「判断基準」はありますか？\n（無ければ「なし」で大丈夫です）', 'bot');
+        step = 3;
+      } else if (step === 3) {
+        data.tips = text;
+        appendMessage('ヒアリングありがとうございます！\n右下の【今日の日報保存✨】を押して保存するか、さらに登録したい場合は【＋ 別の業務を追加】を押してください。', 'bot');
+        step = 4;
+      } else {
+        appendMessage('追加の内容ですね！記録に含めて保存します。他に共有事項があれば入力するか、保存を押してください。', 'bot');
+        data.tips += '\n【追加メモ】: ' + text;
       }
-    });
+    }, 400);
+  }
 
-    function sendMessage() {
-      const input = document.getElementById('user-input');
-      const text = input.value.trim();
-      if (!text) return;
+  // 画面にメッセージ追加（URLリンク化対応）
+  function appendMessage(text, sender) {
+    const chatBody = document.getElementById('chatBody');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${sender}`;
 
-      appendMessage('user', text);
-      log.push("ユーザー: " + text);
-      input.value = '';
+    // エスケープ処理後にURL部分を<a>タグに変換
+    let formattedText = escapeHtml(text);
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    formattedText = formattedText.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
 
-      const loadingWrapper = appendLoading();
+    msgDiv.innerHTML = `<div class="bubble">${formattedText}</div>`;
+    chatBody.appendChild(msgDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
 
+    data.fullLog.push(`${sender === 'bot' ? 'AI' : 'User'}: ${text}`);
+  }
+
+  // 別の業務を追加入力する処理
+  function startNewTask() {
+    if (data.taskName) {
+      appendMessage('--- 別の業務の入力を開始します ---', 'bot');
+    }
+    step = 1;
+    appendMessage('続けて、他に手順を記録しておきたい業務や対応事例があれば教えてください！', 'bot');
+  }
+
+  // キーボードイベント (Enterで送信)
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // スプレッドシート保存処理
+  function saveToSheet() {
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.innerText = '保存中...';
+
+    const payload = {
+      taskName: data.taskName,
+      steps: data.steps,
+      tips: data.tips,
+      fullLog: data.fullLog.join('\n')
+    };
+
+    google.script.run
+      .withSuccessHandler(res => {
+        btn.disabled = false;
+        btn.innerText = '今日の日報保存 ✨';
+
+        if (res.success) {
+          currentSheetUrl = res.url;
+          appendMessage(`✅ 保存が完了しました！\n蓄積されたデータはヘッダーの「📊 シートを確認」ボタン、または以下のリンクから確認できます。\n\n${res.url}`, 'bot');
+        } else {
+          alert('保存エラー: ' + res.message);
+        }
+      })
+      .saveKnowledgeChat(payload);
+  }
+
+  // スプレッドシートを開く処理
+  function openSpreadsheet() {
+    if (currentSheetUrl) {
+      window.open(currentSheetUrl, '_blank');
+    } else {
       google.script.run
-        .withSuccessHandler(function(reply) {
-          loadingWrapper.className = 'message-wrapper bot';
-          loadingWrapper.querySelector('.message').innerText = reply;
-          log.push("Gemini: " + reply);
+        .withSuccessHandler(url => {
+          window.open(url, '_blank');
         })
-        .withFailureHandler(function(error) {
-          loadingWrapper.className = 'message-wrapper error';
-          loadingWrapper.querySelector('.message').innerText = error.message;
-        })
-        .chatWithGemini(text);
+        .getSpreadsheetUrl();
     }
+  }
 
-    function saveReport() {
-      if (log.length === 0) return alert("会話内容がありません");
-      const loadingWrapper = appendLoading("日報を生成・保存中...");
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+</script>
 
-      google.script.run
-        .withSuccessHandler(function(url) {
-          loadingWrapper.className = 'message-wrapper bot';
-          loadingWrapper.querySelector('.message').innerHTML = '✨ <b>保存完了！</b><br><a href="' + url + '" target="_blank" style="color:#4f46e5;font-weight:600;">スプレッドシートを開く ↗</a>';
-        })
-        .withFailureHandler(function(error) {
-          loadingWrapper.className = 'message-wrapper error';
-          loadingWrapper.querySelector('.message').innerText = error.message;
-        })
-        .saveDailyReport(log.join("\n"));
-    }
-
-    function appendMessage(sender, text) {
-      const box = document.getElementById('chat-box');
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message-wrapper ' + sender;
-      const msg = document.createElement('div');
-      msg.className = 'message';
-      msg.innerText = text;
-      wrapper.appendChild(msg);
-      box.appendChild(wrapper);
-      box.scrollTop = box.scrollHeight;
-      return wrapper;
-    }
-
-    function appendLoading(text) {
-      const box = document.getElementById('chat-box');
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message-wrapper bot';
-      const msg = document.createElement('div');
-      msg.className = 'message';
-      msg.innerHTML = text || '<div class="typing-dots"><span></span><span></span><span></span></div>';
-      wrapper.appendChild(msg);
-      box.appendChild(wrapper);
-      box.scrollTop = box.scrollHeight;
-      return wrapper;
-    }
-  </script>
 </body>
 </html>
